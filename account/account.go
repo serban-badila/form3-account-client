@@ -2,21 +2,26 @@ package account
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
+	"time"
 )
 
 const (
-	ACCOUNTS_HOST_ADDR = "ACCOUNTS_HOST_ADDR"
-	ERROR_KEY          = "error_message"
-	ID_KEY             = "id"
+	ERROR_KEY       = "error_message"
+	ID_KEY          = "id"
+	CLIENT_TIMEOUT  = time.Duration(5 * time.Second) // This includes any retries; also impacts some unit tests runtime
+	REQUEST_TIMEOUT = time.Duration(1 * time.Second) // per request
 )
 
+// AccountClient All the bound methods are safe to run as coroutines
 type AccountClient struct {
-	Url string
+	url         string
+	timeout     time.Duration
+	contentType string
+	httpClient  *http.Client
 }
 
 func (ac *AccountClient) GetById(id string) (*AccountData, error) {
@@ -27,75 +32,43 @@ func (ac *AccountClient) GetById(id string) (*AccountData, error) {
 		Type:           "accounts",
 		Version:        0,
 	}, nil
-
-	// &AccountData{
-	// 	Attributes: &AccountAttributes{
-	// 		AccountClassification:   "",
-	// 		AccountMatchingOptOut:   false,
-	// 		AccountNumber:           "",
-	// 		AlternativeNames:        []string{},
-	// 		BankID:                  "",
-	// 		BankIDCode:              "",
-	// 		BaseCurrency:            "",
-	// 		Bic:                     "",
-	// 		Country:                 "",
-	// 		Iban:                    "",
-	// 		JointAccount:            false,
-	// 		Name:                    []string{},
-	// 		SecondaryIdentification: "",
-	// 		Status:                  "",
-	// 		Switched:                false,
-	// 	},
-	// 	ID:             id,
-	// 	OrganisationID: "",
-	// 	Type:           "accounts",
-	// 	Version:        int64(0),
-	// }
 }
 
-type AccountCreateBody struct {
-	Data *AccountData `json:"data,omitempty"`
-}
-
+// CreateAccount upon succcessfull account creation, returns the uuid of the account object
 func (ac *AccountClient) CreateAccount(account *AccountData) (string, error) {
-	client := &http.Client{}
-
-	encoded, err := json.Marshal(AccountCreateBody{Data: account})
+	encoded, err := json.Marshal(CreateRequestBody{Data: account})
 	if err != nil {
-		return "", fmt.Errorf("Could not json encode account data: %w", err)
+		return "", fmt.Errorf("could not json encode account data: %w", err)
 	}
-
 	buffer := bytes.NewBuffer(encoded)
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/organisation/accounts", ac.Url), buffer)
-	request.Header.Set("Content-Type", "application/vnd.api+json")
-
-	resp, err := client.Do(request)
+	ctx, cancel := context.WithTimeout(context.Background(), ac.timeout)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/v1/organisation/accounts", ac.url), buffer)
 	if err != nil {
-		fmt.Println(err)
+		return "", fmt.Errorf("got an error while creating the request: %w", err)
 	}
-	defer resp.Body.Close()
+	request.Header.Set("Content-Type", ac.contentType)
 
-	fmt.Println(resp)
-	body, _ := ioutil.ReadAll(resp.Body)
+	respChan := make(chan *ProcessedResult, 1)
+	go handleRequest(ctx, respChan, ac.httpClient, request)
 
-	var deserialized interface{}
-	json.Unmarshal(body, &deserialized)
-
-	errorMsg, ok := deserialized.(map[string]interface{})[ERROR_KEY]
-	if ok {
-		return "", fmt.Errorf(errorMsg.(string))
-	} else {
-		return deserialized.(map[string]interface{})["data"].(map[string]interface{})[ID_KEY].(string), nil
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("exceeded %v client's total timeout while trying to create the account", ac.timeout)
+	case result := <-respChan:
+		if result.err != nil {
+			return "", result.err
+		}
+		// fmt.Printf("%v", result.accountData)
+		return result.accountData.ID, nil
 	}
 }
 
-func NewAccountClient() *AccountClient {
-	var host string
-	host, ok := os.LookupEnv(ACCOUNTS_HOST_ADDR)
-	if !ok {
-		fmt.Printf("Missing %s in environment! Defaulting to localhost", ACCOUNTS_HOST_ADDR)
-		host = "http://localhost:8080"
+func NewAccountClient(url string) *AccountClient {
+	return &AccountClient{
+		url:         url,
+		timeout:     CLIENT_TIMEOUT,
+		contentType: "application/vnd.api+json",
+		httpClient:  &http.Client{Timeout: REQUEST_TIMEOUT},
 	}
-
-	return &AccountClient{Url: host}
 }

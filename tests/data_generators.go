@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package account
+package tests
 
 import (
 	"fmt"
@@ -27,8 +27,8 @@ var AccountDataFactory = factory.NewFactory(
 }).SubFactory("Attributes", AccountAttributesFactory)
 
 var AccountAttributesFactory = factory.NewFactory(&account.AccountAttributes{}).Attr("Name", func(args factory.Args) (interface{}, error) {
-	len := rand.Int() % account.MAX_NAMES
-	names := make([]string, 0, len+1)
+	len := rand.Int()%account.MAX_NAMES + 1
+	names := make([]string, 0, len)
 	for i := 0; i < len; i++ {
 		names = append(names, fmt.Sprintf("%s %d", namePrefixes[i], rand.Int()%1000))
 	}

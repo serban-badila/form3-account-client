@@ -3,9 +3,10 @@
 
 // these tests assume the service is accessible with the default configuration
 
-package account
+package tests
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,18 +14,20 @@ import (
 	"go.form3-client.com/account"
 )
 
+const HOST_ADDRESS = "http://localhost:8080"
+
 func TestCreateAccount(t *testing.T) {
-	client := account.NewAccountClient()
+	client := account.NewAccountClient(HOST_ADDRESS)
 
 	type testCase struct {
 		name             string
 		givenAccountdata *account.AccountData
-		expctedErrror    error
+		expectedErrror   error
 		expectedResponse string
 	}
 	cases := []testCase{
 		{
-			name: "minimnal account data",
+			name: "succeeds with minimal account data",
 			givenAccountdata: &account.AccountData{
 				ID:             uuid.New().String(),
 				OrganisationID: uuid.New().String(),
@@ -34,29 +37,47 @@ func TestCreateAccount(t *testing.T) {
 					Name:    []string{"Serban", "Badila"},
 				},
 			},
-			expctedErrror: nil,
+			expectedErrror: nil,
+		},
+		{
+			name:             "account type is required",
+			givenAccountdata: AccountDataFactory.MustCreateWithOption(map[string]interface{}{"Type": "invalid type"}).(*account.AccountData),
+			expectedErrror:   errors.New("validation failure list:\nvalidation failure list:\ntype in body should be one of [accounts]"),
+		},
+		{
+			name: "country attrribute is required",
+			givenAccountdata: AccountDataFactory.MustCreateWithOption(
+				map[string]interface{}{"Attributes.Country": ""}).(*account.AccountData),
+			expectedErrror: errors.New("validation failure list:\nvalidation failure list:\nvalidation failure list:\ncountry in body is required"),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// WHEN
 			resp, err := client.CreateAccount(tc.givenAccountdata)
-			assert.Equal(t, tc.expctedErrror, err)
-			assert.Equal(t, tc.givenAccountdata.ID, resp)
+
+			// THEN
+			assert.Equal(t, tc.expectedErrror, err)
+			if err == nil {
+				assert.Equal(t, tc.givenAccountdata.ID, resp)
+			}
 		})
 	}
 }
 
-func TestCreateAccountWithExistingID(t *testing.T) {
-	client := account.NewAccountClient()
+func TestCreateAccountWithExistingIDFails(t *testing.T) {
+	client := account.NewAccountClient(HOST_ADDRESS)
 	fixedID := uuid.New().String()
 
-	// when
+	// WHEN
 	accountData := AccountDataFactory.MustCreateWithOption(map[string]interface{}{"ID": fixedID}).(*account.AccountData)
-	client.CreateAccount(accountData)
+	var err error
+	_, err = client.CreateAccount(accountData)
+	assert.Nil(t, err)
 
-	// then
+	// THEN
 	anotherAccountData := AccountDataFactory.MustCreateWithOption(map[string]interface{}{"ID": fixedID}).(*account.AccountData)
-	_, err := client.CreateAccount(anotherAccountData)
+	_, err = client.CreateAccount(anotherAccountData)
 	assert.Error(t, err)
 }
