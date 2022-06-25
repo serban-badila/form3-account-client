@@ -16,7 +16,7 @@ import (
 
 func main() {
 	apiHostAddress := "http://localhost:8080"
-	accountClient := ac.NewAccountClient(apiHostAddress)
+	accountClient := ac.NewAccountClient(apiHostAddress, ac.ClientTimeout)
 
 	accountData := ac.AccountData{
 		ID:             uuid.New().String(),

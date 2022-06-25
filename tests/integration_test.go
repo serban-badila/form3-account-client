@@ -17,7 +17,7 @@ import (
 const HOST_ADDRESS = "http://localhost:8080"
 
 func TestCreateAccount(t *testing.T) {
-	client := account.NewAccountClient(HOST_ADDRESS)
+	client := account.NewAccountClient(HOST_ADDRESS, account.ClientTimeout)
 
 	type testCase struct {
 		name             string
@@ -67,7 +67,7 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestCreateAccountWithExistingIDFails(t *testing.T) {
-	client := account.NewAccountClient(HOST_ADDRESS)
+	client := account.NewAccountClient(HOST_ADDRESS, account.ClientTimeout)
 	fixedID := uuid.New().String()
 
 	// WHEN

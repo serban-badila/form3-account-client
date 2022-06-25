@@ -2,12 +2,15 @@ build:
 	go build ./...
 
 build-dev:
-	go build -tags "unit integration" ./...
+	go build -tags "unit integration load" ./...
 
-unit-test:
+test-unit:
 	go clean -testcache && go test -race ./... -tags unit -v
 
-integration-test:
+test-integration:
 	go clean -testcache && go test -race ./... -tags integration -v
 
-test-all: unit-test integration-test
+test-load:
+	go clean -testcache && go test ./... -tags load -v # the race detector slows this down and we don't want this :)
+
+test-all: test-unit test-integration test-load

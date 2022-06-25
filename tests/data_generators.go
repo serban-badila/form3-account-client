@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build integration || load
+// +build integration load
 
 package tests
 
@@ -27,7 +27,7 @@ var AccountDataFactory = factory.NewFactory(
 }).SubFactory("Attributes", AccountAttributesFactory)
 
 var AccountAttributesFactory = factory.NewFactory(&account.AccountAttributes{}).Attr("Name", func(args factory.Args) (interface{}, error) {
-	len := rand.Int()%account.MAX_NAMES + 1
+	len := rand.Int()%account.MaxNames + 1
 	names := make([]string, 0, len)
 	for i := 0; i < len; i++ {
 		names = append(names, fmt.Sprintf("%s %d", namePrefixes[i], rand.Int()%1000))

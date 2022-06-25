@@ -3,7 +3,7 @@ package account
 // Copied your models.go file but changed the json tags according to your API
 // specification here https://api-docs.form3.tech/api.html?python#organisation-accounts
 
-const MAX_NAMES = 4 // max length of the Name atribute
+const MaxNames = 4 // max length of the Name atribute
 
 type AccountData struct {
 	Attributes     *AccountAttributes `json:"attributes,omitempty"`
@@ -31,19 +31,19 @@ type AccountAttributes struct {
 	Switched                bool     `json:"switched,omitempty"`
 }
 
-type CreateOkBody struct {
+type createOkBody struct {
 	Data *AccountData `json:"data,required"`
 }
 
-type CreateRequestBody struct {
+type createRequestBody struct {
 	Data *AccountData `json:"data,required"`
 }
 
-type CreateErrorBody struct {
+type createErrorBody struct {
 	ErrorMessage string `json:"error_message,required"`
 }
 
-type ProcessedResult struct {
+type processedResult struct {
 	accountData *AccountData
 	err         error
 }
