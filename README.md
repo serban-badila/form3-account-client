@@ -1,5 +1,5 @@
 ### Run all the tests:   
-  `make test-all`
+As requested, `docker-compose up` will build and run the tests in a dedicated container
 
 
 ### Example usage

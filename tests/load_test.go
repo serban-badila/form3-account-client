@@ -15,8 +15,6 @@ import (
 	"go.form3-client.com/account"
 )
 
-const HOST_ADDRESS = "http://localhost:8080"
-
 type result struct {
 	id  string
 	err error
@@ -25,7 +23,7 @@ type result struct {
 func TestConcurrentCreates(t *testing.T) {
 	iterations := 20
 	resultChan := make(chan *result, iterations)
-	ac := account.NewAccountClient(HOST_ADDRESS, account.ClientTimeout)
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 
 	fireConcurentCreates(ac, iterations, resultChan)
 
@@ -49,7 +47,7 @@ func TestDDOS(t *testing.T) {
 	timeout := time.Duration(10) * time.Second
 	wayTooManyIterations := 1000
 	resultChan := make(chan *result, wayTooManyIterations)
-	ac := account.NewAccountClient(HOST_ADDRESS, timeout)
+	ac := account.NewAccountClient(fetchAPIHostName(), timeout)
 
 	fireConcurentCreates(ac, wayTooManyIterations, resultChan)
 

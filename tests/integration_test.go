@@ -14,10 +14,8 @@ import (
 	"go.form3-client.com/account"
 )
 
-const HOST_ADDRESS = "http://localhost:8080"
-
 func TestCreateAccount(t *testing.T) {
-	client := account.NewAccountClient(HOST_ADDRESS, account.ClientTimeout)
+	client := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 
 	type testCase struct {
 		name             string
@@ -67,7 +65,7 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestCreateAccountWithExistingIDFails(t *testing.T) {
-	client := account.NewAccountClient(HOST_ADDRESS, account.ClientTimeout)
+	client := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 	fixedID := uuid.New().String()
 
 	// WHEN
