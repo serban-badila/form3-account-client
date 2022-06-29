@@ -79,3 +79,19 @@ func TestCreateAccountWithExistingIDFails(t *testing.T) {
 	_, err = client.CreateAccount(anotherAccountData)
 	assert.Error(t, err)
 }
+
+func TestFetch(t *testing.T) {
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+
+	// WHEN
+	data := AccountDataFactory.MustCreate().(*account.AccountData)
+	ac.CreateAccount(data)
+
+	// THEN
+	fetchedData, err := ac.GetById(data.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, data.ID, fetchedData.ID)
+	assert.Equal(t, data.Attributes.Country, fetchedData.Attributes.Country)
+
+	// TODO implement the complete AccountData factory
+}

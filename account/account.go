@@ -28,13 +28,33 @@ type AccountClient struct {
 }
 
 func (ac *AccountClient) GetById(id string) (*AccountData, error) {
-	return &AccountData{
-		Attributes:     nil,
-		ID:             id,
-		OrganisationID: "my-org",
-		Type:           "accounts",
-		Version:        0,
-	}, nil
+	// TODO This is not DRY!
+	var ctx context.Context
+	if ac.timeout != time.Duration(0) {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), ac.timeout)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, id), nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not json encode account data: %w", err)
+	}
+	request.Header.Set("Content-Type", ac.contentType)
+	respChan := make(chan *processedResult, 1)
+	ctxWithLogger := ac.logger.WithContext(ctx)
+	go handleRequest(ctxWithLogger, respChan, ac.httpClient, request)
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("exceeded %v client's total timeout while trying to create the account", ac.timeout)
+	case result := <-respChan:
+		if result.err != nil {
+			return nil, result.err
+		}
+		return result.accountData, nil
+	}
 }
 
 // CreateAccount upon succcessfull account creation, returns the uuid of the account object and a nill error
@@ -78,14 +98,13 @@ func (ac *AccountClient) CreateAccount(account *AccountData) (string, error) {
 // retries. Passing a time.Duration(0) will disable the timeout.
 func NewAccountClient(url string, timeout time.Duration) *AccountClient {
 	newLogger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	acc := &AccountClient{
+	ac := &AccountClient{
 		url:         url,
 		contentType: "application/vnd.api+json",
 		httpClient:  &http.Client{},
 		logger:      newLogger,
 	}
-	if timeout.Nanoseconds() > 0 {
-		acc.timeout = timeout
-	}
-	return acc
+	ac.timeout = timeout // default value is time.Duration(0)
+
+	return ac
 }
