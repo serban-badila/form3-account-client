@@ -7,6 +7,7 @@ package tests
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -80,7 +81,7 @@ func TestCreateAccountWithExistingIDFails(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFetch(t *testing.T) {
+func TestCanFetch(t *testing.T) {
 	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 
 	// WHEN
@@ -94,4 +95,31 @@ func TestFetch(t *testing.T) {
 	assert.Equal(t, data.Attributes.Country, fetchedData.Attributes.Country)
 
 	// TODO implement the complete AccountData factory
+}
+
+func TestFetchInvalidAccountId(t *testing.T) {
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+
+	// WHEN
+	fetchedData, err := ac.GetById("non existing id")
+
+	// THEN
+	assert.Nil(t, fetchedData)
+	assert.NotNil(t, err)
+	assert.Equal(t, "id is not a valid uuid", err.Error())
+
+}
+
+func TestFetchNonExistingAccount(t *testing.T) {
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+
+	// WHEN
+	notInsertedAccount := AccountDataFactory.MustCreate().(*account.AccountData) // only need the generated ID
+	fetchedData, err := ac.GetById(notInsertedAccount.ID)
+
+	// THEN
+	assert.Nil(t, fetchedData)
+	assert.NotNil(t, err)
+	assert.Equal(t, fmt.Sprintf("record %s does not exist", notInsertedAccount.ID), err.Error())
+
 }
