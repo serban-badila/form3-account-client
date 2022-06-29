@@ -2,6 +2,7 @@
 As requested, `docker-compose up` will build and run the tests in a dedicated container
 
 
+
 ### Example usage
 ```
 package main
@@ -34,3 +35,5 @@ func main() {
 }
 
 ```
+
+All the functions bound to this client are safe to run concurrently.

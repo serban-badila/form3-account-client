@@ -1,7 +1,7 @@
 //go:build load
 // +build load
 
-// same as the integration tests, these assume the API server is running on the default host
+// same as the integration as a tests, these assume the API server is running on the default host
 
 package tests
 
