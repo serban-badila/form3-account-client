@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -42,10 +43,10 @@ func NewAccountClient(url string, timeout time.Duration) *AccountClient {
 	return ac
 }
 
-func (ac *AccountClient) GetById(id string) (*AccountData, error) {
+func (ac *AccountClient) GetById(accountId string) (*AccountData, error) {
 	ctx, cancel := ac.buildContext()
 	defer cancel()
-	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, id), nil)
+	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, accountId), nil)
 	if err != nil {
 		return nil, fmt.Errorf("got an error while creating the request: %w", err)
 	}
@@ -78,6 +79,23 @@ func (ac *AccountClient) CreateAccount(account *AccountData) (string, error) {
 		return "", err
 	}
 	return result.accountData.ID, err
+}
+
+func (ac *AccountClient) DeleteAccount(accountId string, version int64) error {
+
+	ctx, cancel := ac.buildContext()
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, "DELETE", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, accountId), nil)
+	if err != nil {
+		return fmt.Errorf("got an error while creating the request: %w", err)
+	}
+	querry := url.Values{}
+	querry.Add("version", fmt.Sprint(version))
+	request.URL.RawQuery = querry.Encode()
+
+	_, err = ac.executeRequest(ctx, request)
+
+	return err
 }
 
 func (ac *AccountClient) buildContext() (context.Context, context.CancelFunc) {

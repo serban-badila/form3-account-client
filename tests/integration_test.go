@@ -49,6 +49,12 @@ func TestCreateAccount(t *testing.T) {
 				map[string]interface{}{"Attributes.Country": ""}).(*account.AccountData),
 			expectedErrror: errors.New("validation failure list:\nvalidation failure list:\nvalidation failure list:\ncountry in body is required"),
 		},
+		{
+			name: "invalid account id",
+			givenAccountdata: AccountDataFactory.MustCreateWithOption(
+				map[string]interface{}{"ID": "invalid-id"}).(*account.AccountData),
+			expectedErrror: errors.New("validation failure list:\nvalidation failure list:\nid in body must be of type uuid: \"invalid-id\""),
+		},
 	}
 
 	for _, tc := range cases {
@@ -121,5 +127,20 @@ func TestFetchNonExistingAccount(t *testing.T) {
 	assert.Nil(t, fetchedData)
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Sprintf("record %s does not exist", notInsertedAccount.ID), err.Error())
+
+}
+
+func TestDelete(t *testing.T) {
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+
+	t.Run("can delete successfully", func(t *testing.T) {
+		// WHEN
+		data := AccountDataFactory.MustCreate().(*account.AccountData)
+		ac.CreateAccount(data)
+
+		// THEN
+		err := ac.DeleteAccount(data.ID, data.Version)
+		assert.NoError(t, err)
+	})
 
 }
