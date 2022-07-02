@@ -60,10 +60,10 @@ func (ac *AccountClient) GetById(accountId string) (*AccountData, error) {
 }
 
 // CreateAccount upon succcessfull account creation, returns the uuid of the account object and a nill error
-func (ac *AccountClient) CreateAccount(account *AccountData) (string, error) {
+func (ac *AccountClient) CreateAccount(account *AccountData) (*AccountData, error) {
 	encoded, err := json.Marshal(createRequestBody{Data: account})
 	if err != nil {
-		return "", fmt.Errorf("could not json encode account data: %w", err)
+		return &AccountData{}, fmt.Errorf("could not json encode account data: %w", err)
 	}
 
 	ctx, cancel := ac.buildContext()
@@ -71,14 +71,14 @@ func (ac *AccountClient) CreateAccount(account *AccountData) (string, error) {
 	buffer := bytes.NewBuffer(encoded)
 	request, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/v1/organisation/accounts", ac.url), buffer)
 	if err != nil {
-		return "", fmt.Errorf("got an error while creating the request: %w", err)
+		return &AccountData{}, fmt.Errorf("got an error while creating the request: %w", err)
 	}
 
 	result, err := ac.executeRequest(ctx, request)
 	if err != nil {
-		return "", err
+		return &AccountData{}, err
 	}
-	return result.accountData.ID, err
+	return result.accountData, err
 }
 
 func (ac *AccountClient) DeleteAccount(accountId string, version int64) error {

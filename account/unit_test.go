@@ -34,8 +34,8 @@ func TestCreateAccountSucceedsAfter5xxResponse(t *testing.T) {
 
 	// THEN
 	client := NewAccountClient(serverWithInternalError.URL, ClientTimeout)
-	id, err := client.CreateAccount(&AccountData{})
-	assert.Equal(t, testId, id)
+	acc, err := client.CreateAccount(&AccountData{})
+	assert.Equal(t, testId, acc.ID)
 	assert.Nil(t, err)
 }
 
@@ -51,8 +51,7 @@ func TestCreateAccountFailsWith5xxResponse(t *testing.T) {
 	// THEN
 	timeout := time.Duration(2 * time.Second)
 	client := NewAccountClient(serverWithInternalError.URL, timeout)
-	id, err := client.CreateAccount(&AccountData{})
-	assert.Equal(t, "", id)
+	_, err := client.CreateAccount(&AccountData{})
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), fmt.Sprintf("exceeded %v client's total timeout", timeout)))
 }
@@ -70,12 +69,12 @@ func TestCreateAccountSuceedsWhenServerRespondsSlowly(t *testing.T) {
 
 	// THEN
 	client := NewAccountClient(serverTakesTooLongToRepond.URL, timeout)
-	id, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
+	acc, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
-	assert.Equal(t, "dummy id", id)
+	assert.Equal(t, "dummy id", acc.ID)
 }
 
-// Will wait for as long as it takes with not errors logged
+// Will wait for as long as it takes without any errors logged
 func TestClientWithoutTimeoutWaitsIndefinitely(t *testing.T) {
 	// WHEN
 	serverTakesTooLongToRepond := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -90,9 +89,9 @@ func TestClientWithoutTimeoutWaitsIndefinitely(t *testing.T) {
 
 	// THEN
 
-	id, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
+	acc, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
-	assert.Equal(t, "dummy id", id)
+	assert.Equal(t, "dummy id", acc.ID)
 
 	fetchedData, err := client.GetById("does not matter")
 	assert.Nil(t, err)

@@ -65,7 +65,7 @@ func TestCreateAccount(t *testing.T) {
 			// THEN
 			assert.Equal(t, tc.expectedErrror, err)
 			if err == nil {
-				assert.Equal(t, tc.givenAccountdata.ID, resp)
+				assert.Equal(t, tc.givenAccountdata.ID, resp.ID)
 			}
 		})
 	}
