@@ -73,7 +73,7 @@ func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, cl
 	case 400, 401, 403, 404, 405, 406, 409:
 		{
 			json.Unmarshal(body, &deserializedNotOk)
-			resultChan <- &processedResult{nil, fmt.Errorf(deserializedNotOk.ErrorMessage)}
+			resultChan <- &processedResult{nil, fmt.Errorf("response status code %d with error message: %s", statusCode, deserializedNotOk.ErrorMessage)}
 			return false
 		}
 	case 429, 500, 502, 503, 504:

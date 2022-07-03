@@ -22,6 +22,8 @@ var AccountDataFactory = factory.NewFactory(
 	return uuid.New().String(), nil
 }).Attr("OrganisationID", func(args factory.Args) (interface{}, error) {
 	return uuid.New().String(), nil
+}).Attr("Version", func(args factory.Args) (interface{}, error) {
+	return int64(0), nil
 }).Attr("Type", func(args factory.Args) (interface{}, error) {
 	return "accounts", nil
 }).SubFactory("Attributes", AccountAttributesFactory)

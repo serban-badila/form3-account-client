@@ -98,6 +98,27 @@ func (ac *AccountClient) DeleteAccount(accountId string, version int64) error {
 	return err
 }
 
+func (ac *AccountClient) UpdateAccount(account *AccountData) (*AccountData, error) {
+	encoded, err := json.Marshal(createRequestBody{Data: account})
+	if err != nil {
+		return &AccountData{}, fmt.Errorf("could not json encode account data: %w", err)
+	}
+
+	ctx, cancel := ac.buildContext()
+	defer cancel()
+	buffer := bytes.NewBuffer(encoded)
+	request, err := http.NewRequestWithContext(ctx, "PATCH", fmt.Sprintf("%s/v1/organisation/account/%s", ac.url, account.ID), buffer)
+	if err != nil {
+		return &AccountData{}, fmt.Errorf("got an error while creating the request: %w", err)
+	}
+	request.Header.Set("Accept", ac.contentType)
+	result, err := ac.executeRequest(ctx, request)
+	if err != nil {
+		return &AccountData{}, err
+	}
+	return result.accountData, err
+}
+
 func (ac *AccountClient) buildContext() (context.Context, context.CancelFunc) {
 	if ac.timeout != time.Duration(0) {
 		return context.WithTimeout(context.Background(), ac.timeout)

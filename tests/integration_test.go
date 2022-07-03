@@ -41,19 +41,19 @@ func TestCreateAccount(t *testing.T) {
 		{
 			name:             "account type is required",
 			givenAccountdata: AccountDataFactory.MustCreateWithOption(map[string]interface{}{"Type": "invalid type"}).(*account.AccountData),
-			expectedErrror:   errors.New("validation failure list:\nvalidation failure list:\ntype in body should be one of [accounts]"),
+			expectedErrror:   errors.New("response status code 400 with error message: validation failure list:\nvalidation failure list:\ntype in body should be one of [accounts]"),
 		},
 		{
 			name: "country attrribute is required",
 			givenAccountdata: AccountDataFactory.MustCreateWithOption(
 				map[string]interface{}{"Attributes.Country": ""}).(*account.AccountData),
-			expectedErrror: errors.New("validation failure list:\nvalidation failure list:\nvalidation failure list:\ncountry in body is required"),
+			expectedErrror: errors.New("response status code 400 with error message: validation failure list:\nvalidation failure list:\nvalidation failure list:\ncountry in body is required"),
 		},
 		{
 			name: "invalid account id",
 			givenAccountdata: AccountDataFactory.MustCreateWithOption(
 				map[string]interface{}{"ID": "invalid-id"}).(*account.AccountData),
-			expectedErrror: errors.New("validation failure list:\nvalidation failure list:\nid in body must be of type uuid: \"invalid-id\""),
+			expectedErrror: errors.New("response status code 400 with error message: validation failure list:\nvalidation failure list:\nid in body must be of type uuid: \"invalid-id\""),
 		},
 	}
 
@@ -112,7 +112,7 @@ func TestFetchInvalidAccountId(t *testing.T) {
 	// THEN
 	assert.Nil(t, fetchedData)
 	assert.NotNil(t, err)
-	assert.Equal(t, "id is not a valid uuid", err.Error())
+	assert.Equal(t, "response status code 400 with error message: id is not a valid uuid", err.Error())
 
 }
 
@@ -126,7 +126,7 @@ func TestFetchNonExistingAccount(t *testing.T) {
 	// THEN
 	assert.Nil(t, fetchedData)
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Sprintf("record %s does not exist", notInsertedAccount.ID), err.Error())
+	assert.Equal(t, fmt.Sprintf("response status code 404 with error message: record %s does not exist", notInsertedAccount.ID), err.Error())
 
 }
 
@@ -142,5 +142,23 @@ func TestDelete(t *testing.T) {
 		err := ac.DeleteAccount(data.ID, data.Version)
 		assert.NoError(t, err)
 	})
+}
 
+func TestPatch(t *testing.T) {
+	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+
+	t.Run("cannot patch data; likely not implemented on the server side", func(t *testing.T) {
+		// WHEN
+		data := AccountDataFactory.MustCreate().(*account.AccountData)
+		result, err := ac.CreateAccount(data)
+		assert.NoError(t, err)
+		result.Attributes.Country = "ZB"
+		result.Version++
+		fmt.Print("\n", result, "\n", result.Attributes, "\n")
+		_, err = ac.UpdateAccount(data)
+
+		// THEN
+		assert.Equal(t, err.Error(), "response status code 404 with error message: ")
+
+	})
 }

@@ -2,6 +2,11 @@
 As requested, `docker-compose up` will build and run the tests in a dedicated container
 
 
+### Things found about the API Server
+
+
+- `PATCH` responses are breaking the contract specified in the API Docs, by responding with the payload `{"code": "PAGE_NOT_FOUND", "message": "Page not found"}`. I guess this is not even implemented. I found this while trying to test that DELETE can erase outdated versions, when I realized the only way I can increment the version as a client was through a PATCH (I left the client implementation in with an integration test).
+
 
 ### Example usage
 ```
