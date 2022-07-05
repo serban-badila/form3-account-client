@@ -59,7 +59,7 @@ func (ac *AccountClient) GetById(accountId string) (*AccountData, error) {
 
 }
 
-// CreateAccount upon succcessfull account creation, returns the uuid of the account object and a nill error
+// CreateAccount upon succcessful account creation, returns the updated account object and a nil error
 func (ac *AccountClient) CreateAccount(account *AccountData) (*AccountData, error) {
 	encoded, err := json.Marshal(createRequestBody{Data: account})
 	if err != nil {

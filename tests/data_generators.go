@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	namePrefixes = [...]string{"First name", "Last name", "Third name", "Fourth name"}
-	countries    = [...]string{"GB", "RO", "DK", "FR", "CH"}
+	namePrefixes  = [...]string{"First name", "Last name", "Third name", "Fourth name"}
+	countries     = [...]string{"GB", "RO", "DK", "FR", "CH", "BE", "CA"}
+	bankCodeRange = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 var AccountDataFactory = factory.NewFactory(
@@ -38,4 +39,11 @@ var AccountAttributesFactory = factory.NewFactory(&account.AccountAttributes{}).
 }).Attr("Country", func(args factory.Args) (interface{}, error) {
 	index := rand.Int() % len(countries)
 	return countries[index], nil
+}).Attr("BankIDCode", func(args factory.Args) (interface{}, error) {
+	length := rand.Int() % (account.MaxBankCodeLength + 1)
+	bankCode := make([]byte, length)
+	for ind := range bankCode {
+		bankCode[ind] = bankCodeRange[rand.Intn(len(bankCodeRange))]
+	}
+	return string(bankCode), nil
 })

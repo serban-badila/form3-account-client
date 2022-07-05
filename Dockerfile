@@ -8,6 +8,7 @@ FROM golang:1.18-alpine as base
 
     COPY account/ ./account
 
+    # no C compiler present so the race detector and make are also missing 
     ENV CGO_ENABLED="0"
 
     RUN go build ./...

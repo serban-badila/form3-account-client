@@ -1,9 +1,10 @@
 package account
 
-// Copied your models.go file but changed the json tags according to your API
+// Copied your models.go file but changed a json tag according to your API
 // specification here https://api-docs.form3.tech/api.html?python#organisation-accounts
 
-const MaxNames = 4 // max length of the Name atribute
+const MaxNames = 4 // max length of the Name array
+const MaxBankCodeLength = 16
 
 type AccountData struct {
 	Attributes     *AccountAttributes `json:"attributes,omitempty"`

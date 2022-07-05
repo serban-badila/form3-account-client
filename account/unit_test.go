@@ -88,7 +88,6 @@ func TestClientWithoutTimeoutWaitsIndefinitely(t *testing.T) {
 	client.logger = client.logger.Output(&buf) // redirect logs to a buffer so we can assert them
 
 	// THEN
-
 	acc, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
 	assert.Equal(t, "dummy id", acc.ID)

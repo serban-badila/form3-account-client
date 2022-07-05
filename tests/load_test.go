@@ -25,7 +25,7 @@ func TestConcurrentCreates(t *testing.T) {
 	resultChan := make(chan *result, iterations)
 	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 
-	fireConcurentCreates(ac, iterations, resultChan)
+	fireConcurrentCreates(ac, iterations, resultChan)
 
 	for i := 0; i < iterations; i++ {
 		select {
@@ -48,13 +48,13 @@ it seems I am atually able to DDOS the API server and its database...
 also due to some error messages of the form "account id %%% already exists" I can guess the server doesn't interrupt execution in case the client closes the connection
 I sometimes saw these when putting the server under load while the client was retrying the POST due to higher response times
 */
-func TestDDOS(t *testing.T) {
+func TestHeavyWriteLoad(t *testing.T) {
 	timeout := time.Duration(10) * time.Second
 	wayTooManyIterations := 1000
 	resultChan := make(chan *result, wayTooManyIterations)
 	ac := account.NewAccountClient(fetchAPIHostName(), timeout)
 
-	fireConcurentCreates(ac, wayTooManyIterations, resultChan)
+	fireConcurrentCreates(ac, wayTooManyIterations, resultChan)
 
 	var errorSample error
 	for i := 0; i < wayTooManyIterations; i++ {
@@ -72,9 +72,10 @@ func TestDDOS(t *testing.T) {
 	assert.NotNil(t, errorSample)
 	assert.True(t,
 		strings.Contains(errorSample.Error(), fmt.Sprintf("exceeded %v client's total timeout", timeout)) || strings.Contains(errorSample.Error(), "does not exist"))
-} // the second error string is due to the client interrupting connections then retrying to send the POST while the server is overloaded
+	// the second error string is due to the client interrupting connections then retrying to send the POST while the server is overloaded
+}
 
-func fireConcurentCreates(ac *account.AccountClient, iterations int, resultChan chan<- *result) {
+func fireConcurrentCreates(ac *account.AccountClient, iterations int, resultChan chan<- *result) {
 	for i := 0; i < iterations; i++ {
 		go func() {
 			acc, err := ac.CreateAccount(AccountDataFactory.MustCreate().(*account.AccountData))
