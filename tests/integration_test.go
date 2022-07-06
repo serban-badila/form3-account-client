@@ -22,21 +22,22 @@ func TestCreateAccount(t *testing.T) {
 		name             string
 		givenAccountdata *account.AccountData
 		expectedErrror   error
-		expectedResponse string
+	}
+
+	minimalAccountData := &account.AccountData{
+		ID:             uuid.New().String(),
+		OrganisationID: uuid.New().String(),
+		Type:           "accounts", // this seems to be required for the Create operation although the APIdocs say its optional...
+		Attributes: &account.AccountAttributes{
+			Country: "RO",
+			Name:    []string{"Serban", "Badila"},
+		},
 	}
 	cases := []testCase{
 		{
-			name: "succeeds with minimal account data",
-			givenAccountdata: &account.AccountData{
-				ID:             uuid.New().String(),
-				OrganisationID: uuid.New().String(),
-				Type:           "accounts", // this seems to be required for the Create operation although the APIdocs say its optional...
-				Attributes: &account.AccountAttributes{
-					Country: "RO",
-					Name:    []string{"Serban", "Badila"},
-				},
-			},
-			expectedErrror: nil,
+			name:             "succeeds with minimal account data",
+			givenAccountdata: minimalAccountData,
+			expectedErrror:   nil,
 		},
 		{
 			name:             "account type is required",
@@ -95,7 +96,7 @@ func TestCreateAccount(t *testing.T) {
 			// THEN
 			assert.Equal(t, tc.expectedErrror, err, "submitted data: %s", tc.givenAccountdata)
 			if err == nil {
-				assert.Equal(t, tc.givenAccountdata.ID, resp.ID)
+				assert.Equal(t, tc.givenAccountdata, resp)
 			}
 		})
 	}

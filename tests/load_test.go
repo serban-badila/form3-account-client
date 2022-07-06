@@ -43,7 +43,7 @@ expect a 429 status http.Response from the server.
 the database has too many open connections (looking at the container logs)
 and I would expect the server be in charge internally of properly managing the db connections
 
-it seems I am atually able to DDOS the API server and its database...
+it seems I am atually able to DOS the API server and its database...
 
 also due to some error messages of the form "account id %%% already exists" I can guess the server doesn't interrupt execution in case the client closes the connection
 I sometimes saw these when putting the server under load while the client was retrying the POST due to higher response times

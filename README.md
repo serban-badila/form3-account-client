@@ -8,7 +8,7 @@ Integration and load tests require the docker network up and running.
 
 ### Things found about the API Server
 
-- This is the more serious one: it seems I am able to perform a DDOS attack on this dummy server instance and it happily forwards the attack onto the database instead of managing it (by rate limiting for instance); You can read more about this in the load tests. I can imagine in reality this kind of service sits behind an ingress or an  apiGateway and it may rely on these to manage incoming requests.
+- This is the more serious one: it seems I am able to perform a DOS attack on this dummy server instance and it happily forwards the attack onto the database instead of managing it (by rate limiting for instance); You can read more about this in the load tests. I can imagine in reality this kind of service sits behind an ingress or an  apiGateway and it may rely on these to manage incoming requests.
 
 - The API docs are a bit misleading: some attributes are described as optional whereas they are required (e.g. the account's `type`), others are described as (conditionally) required when they are not (some of the bank account's attributes for instance). Some integration tests check for this.
 
