@@ -1,4 +1,6 @@
 
+![Build](https://github.com/serban-badila/form3-account-client/actions/workflows/build.yml/badge.svg)
+
 As requested, `docker-compose up` will build and run the tests in a dedicated container. 
 
 Alternatively, there is a `Makefile` provided for convenience but you will need the `CGO_ENABLED` for the make commands. 
