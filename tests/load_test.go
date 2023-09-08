@@ -6,6 +6,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -76,9 +77,10 @@ func TestHeavyWriteLoad(t *testing.T) {
 }
 
 func fireConcurrentCreates(ac *account.AccountClient, iterations int, resultChan chan<- *result) {
+	ctx := context.Background()
 	for i := 0; i < iterations; i++ {
 		go func() {
-			acc, err := ac.CreateAccount(AccountDataFactory.MustCreate().(*account.AccountData))
+			acc, err := ac.CreateAccount(ctx, AccountDataFactory.MustCreate().(*account.AccountData))
 			resultChan <- &result{acc, err}
 		}()
 	}

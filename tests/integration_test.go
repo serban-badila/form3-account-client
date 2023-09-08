@@ -6,6 +6,7 @@
 package tests
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -87,11 +88,11 @@ func TestCreateAccount(t *testing.T) {
 			expectedErrror: nil,
 		},
 	}
-
+	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// WHEN
-			resp, err := client.CreateAccount(tc.givenAccountdata)
+			resp, err := client.CreateAccount(ctx, tc.givenAccountdata)
 
 			// THEN
 			assert.Equal(t, tc.expectedErrror, err, "submitted data: %s", tc.givenAccountdata)
@@ -105,36 +106,38 @@ func TestCreateAccount(t *testing.T) {
 func TestCreateAccountWithExistingIDFails(t *testing.T) {
 	client := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
 	fixedID := uuid.New().String()
+	ctx := context.Background()
 
 	// WHEN
 	accountData := AccountDataFactory.MustCreateWithOption(map[string]interface{}{"ID": fixedID}).(*account.AccountData)
 	var err error
-	_, err = client.CreateAccount(accountData)
+	_, err = client.CreateAccount(ctx, accountData)
 	assert.Nil(t, err)
 
 	// THEN
 	anotherAccountData := AccountDataFactory.MustCreateWithOption(map[string]interface{}{"ID": fixedID}).(*account.AccountData)
-	_, err = client.CreateAccount(anotherAccountData)
+	_, err = client.CreateAccount(ctx, anotherAccountData)
 	assert.Error(t, err)
 }
 
 func TestCanFetch(t *testing.T) {
 	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	ctx := context.Background()
 
 	t.Run("can fetch account data", func(t *testing.T) {
 		// WHEN
 		data := AccountDataFactory.MustCreate().(*account.AccountData)
-		ac.CreateAccount(data)
+		ac.CreateAccount(ctx, data)
 
 		// THEN
-		fetchedData, err := ac.GetById(data.ID)
+		fetchedData, err := ac.GetById(ctx, data.ID)
 		assert.Nil(t, err)
 		assert.Equal(t, data, fetchedData)
 	})
 
 	t.Run("fetch invalid account", func(t *testing.T) {
 		// WHEN
-		fetchedData, err := ac.GetById("non existing id")
+		fetchedData, err := ac.GetById(ctx, "non existing id")
 
 		// THEN
 		assert.Nil(t, fetchedData)
@@ -146,7 +149,7 @@ func TestCanFetch(t *testing.T) {
 	t.Run("fetch non existing account", func(t *testing.T) {
 		// WHEN
 		notInsertedAccount := AccountDataFactory.MustCreate().(*account.AccountData) // only need the generated ID
-		fetchedData, err := ac.GetById(notInsertedAccount.ID)
+		fetchedData, err := ac.GetById(ctx, notInsertedAccount.ID)
 
 		// THEN
 		assert.Nil(t, fetchedData)
@@ -158,39 +161,41 @@ func TestCanFetch(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	ctx := context.Background()
 
 	t.Run("can delete successfully", func(t *testing.T) {
 		// WHEN
 		data := AccountDataFactory.MustCreate().(*account.AccountData)
-		ac.CreateAccount(data)
+		ac.CreateAccount(ctx, data)
 
 		// THEN
-		err := ac.DeleteAccount(data.ID, data.Version)
+		err := ac.DeleteAccount(ctx, data.ID, data.Version)
 		assert.NoError(t, err)
 	})
 
 	t.Run("can delete successfully", func(t *testing.T) {
 		// WHEN
 		data := AccountDataFactory.MustCreate().(*account.AccountData)
-		ac.CreateAccount(data)
+		ac.CreateAccount(ctx, data)
 
 		// THEN
-		err := ac.DeleteAccount(data.ID, data.Version)
+		err := ac.DeleteAccount(ctx, data.ID, data.Version)
 		assert.NoError(t, err)
 	})
 }
 
 func TestPatch(t *testing.T) {
 	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	ctx := context.Background()
 
 	t.Run("cannot patch data; likely not implemented on the server side", func(t *testing.T) {
 		// WHEN
 		data := AccountDataFactory.MustCreate().(*account.AccountData)
-		result, err := ac.CreateAccount(data)
+		result, err := ac.CreateAccount(ctx, data)
 		assert.NoError(t, err)
 		result.Attributes.Country = "ZB"
 		result.Version++
-		_, err = ac.UpdateAccount(data)
+		_, err = ac.UpdateAccount(ctx, data)
 
 		// THEN
 		assert.Equal(t, err.Error(), "response status code 404 with error message: ")

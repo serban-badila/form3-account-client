@@ -5,6 +5,7 @@ package account
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -32,9 +33,10 @@ func TestCreateAccountSucceedsAfter5xxResponse(t *testing.T) {
 	}))
 	defer serverWithInternalError.Close()
 
+	ctx := context.Background()
 	// THEN
 	client := NewAccountClient(serverWithInternalError.URL, ClientTimeout)
-	acc, err := client.CreateAccount(&AccountData{})
+	acc, err := client.CreateAccount(ctx, &AccountData{})
 	assert.Equal(t, testId, acc.ID)
 	assert.Nil(t, err)
 }
@@ -47,11 +49,12 @@ func TestCreateAccountFailsWith5xxResponse(t *testing.T) {
 		w.Write([]byte(`{"error_message": "user won't care about this error"}`))
 	}))
 	defer serverWithInternalError.Close()
+	ctx := context.Background()
 
 	// THEN
 	timeout := time.Duration(2 * time.Second)
 	client := NewAccountClient(serverWithInternalError.URL, timeout)
-	_, err := client.CreateAccount(&AccountData{})
+	_, err := client.CreateAccount(ctx, &AccountData{})
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), fmt.Sprintf("exceeded %v client's total timeout", timeout)))
 }
@@ -66,10 +69,11 @@ func TestCreateAccountSuceedsWhenServerRespondsSlowly(t *testing.T) {
 		w.Write([]byte(`{"data": {"id": "dummy id"}}`))
 	}))
 	defer serverTakesTooLongToRepond.Close()
+	ctx := context.Background()
 
 	// THEN
 	client := NewAccountClient(serverTakesTooLongToRepond.URL, timeout)
-	acc, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
+	acc, err := client.CreateAccount(ctx, &AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
 	assert.Equal(t, "dummy id", acc.ID)
 }
@@ -86,13 +90,14 @@ func TestClientWithoutTimeoutWaitsIndefinitely(t *testing.T) {
 	client := NewAccountClient(serverTakesTooLongToRepond.URL, time.Duration(0))
 	var buf bytes.Buffer
 	client.logger = client.logger.Output(&buf) // redirect logs to a buffer so we can assert them
+	ctx := context.Background()
 
 	// THEN
-	acc, err := client.CreateAccount(&AccountData{}) // acount data does not matter in this case
+	acc, err := client.CreateAccount(ctx, &AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
 	assert.Equal(t, "dummy id", acc.ID)
 
-	fetchedData, err := client.GetById("does not matter")
+	fetchedData, err := client.GetById(ctx, "does not matter")
 	assert.Nil(t, err)
 	assert.Equal(t, fetchedData.ID, "dummy id")
 	assert.Equal(t, 0, buf.Len())
