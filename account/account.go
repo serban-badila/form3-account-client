@@ -38,7 +38,7 @@ func NewAccountClient(url string, timeout time.Duration) *AccountClient {
 		httpClient:  &http.Client{},
 		logger:      newLogger,
 	}
-	ac.timeout = timeout // default value is time.Duration(0)
+	ac.timeout = timeout
 
 	return ac
 }

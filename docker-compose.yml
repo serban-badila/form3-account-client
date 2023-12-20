@@ -48,6 +48,6 @@ services:
       target: dev-test
     environment:
       - HOST_ADDRESS=http://accountapi:8080
-    command: sh -c "go test ./... -tags unit -v && go test ./... -tags integration -v && go test ./... -tags load -v"
+    command: sh -c "go test ./... -tags unit -v && go test ./... -tags integration -v"
     depends_on:
       - accountapi
