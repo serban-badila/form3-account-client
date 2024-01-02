@@ -8,6 +8,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,8 @@ type result struct {
 func TestConcurrentCreates(t *testing.T) {
 	iterations := 20
 	resultChan := make(chan *result, iterations)
-	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	ac := account.NewAccountClient(fetchAPIHostName(), &hc)
 
 	fireConcurrentCreates(ac, iterations, resultChan)
 
@@ -53,7 +55,8 @@ func TestHeavyWriteLoad(t *testing.T) {
 	timeout := time.Duration(10) * time.Second
 	wayTooManyIterations := 1000
 	resultChan := make(chan *result, wayTooManyIterations)
-	ac := account.NewAccountClient(fetchAPIHostName(), timeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	ac := account.NewAccountClient(fetchAPIHostName(), &hc)
 
 	fireConcurrentCreates(ac, wayTooManyIterations, resultChan)
 

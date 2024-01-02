@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"math/rand"
 	"net/http"
@@ -90,13 +90,13 @@ func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, cl
 
 func doAndReadBody(client *http.Client, request *http.Request) ([]byte, int, error) {
 	resp, err := client.Do(request) // when the response is not nil these may be caused by redirects only;
-	// and the from the API docs, the server doesn't redirect
+	// and from the API docs, the server doesn't redirect
 	if err != nil {
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err
 	}

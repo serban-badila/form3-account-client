@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/google/uuid"
 
@@ -27,7 +28,8 @@ import (
 
 func main() {
 	apiHostAddress := "http://localhost:8080"
-	accountClient := ac.NewAccountClient(apiHostAddress, ac.ClientTimeout)
+	httpClient := &http.Client{Timeout: ac.ClientTimeout}
+	accountClient := ac.NewAccountClient(apiHostAddress, httpClient)
 
 	accountData := ac.AccountData{
 		ID:             uuid.New().String(),

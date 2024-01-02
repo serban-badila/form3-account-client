@@ -22,7 +22,7 @@ func TestCreateAccountSucceedsAfter5xxResponse(t *testing.T) {
 	attempt := 0
 	testId := "test id"
 	serverWithInternalError := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if attempt == 0 {
+		if attempt < 2 {
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error_message": "user won't care about this error"}`))
 			attempt++
@@ -35,13 +35,15 @@ func TestCreateAccountSucceedsAfter5xxResponse(t *testing.T) {
 
 	ctx := context.Background()
 	// THEN
-	client := NewAccountClient(serverWithInternalError.URL, ClientTimeout)
+
+	httpClient := &http.Client{Timeout: ClientTimeout}
+	client := NewAccountClient(serverWithInternalError.URL, httpClient)
 	acc, err := client.CreateAccount(ctx, &AccountData{})
 	assert.Equal(t, testId, acc.ID)
 	assert.Nil(t, err)
 }
 
-// Global timeout kicks in if server is down
+// Context timeout kicks in if server is down
 func TestCreateAccountFailsWith5xxResponse(t *testing.T) {
 	// WHEN
 	serverWithInternalError := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -50,16 +52,19 @@ func TestCreateAccountFailsWith5xxResponse(t *testing.T) {
 	}))
 	defer serverWithInternalError.Close()
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(2*time.Second))
+	defer cancel()
 
 	// THEN
 	timeout := time.Duration(2 * time.Second)
-	client := NewAccountClient(serverWithInternalError.URL, timeout)
+	httpClient := &http.Client{Timeout: timeout}
+	client := NewAccountClient(serverWithInternalError.URL, httpClient)
 	_, err := client.CreateAccount(ctx, &AccountData{})
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), fmt.Sprintf("exceeded %v client's total timeout", timeout)))
+	assert.True(t, strings.Contains(err.Error(), "context deadline exceeded"))
 }
 
-// Does not use a request timeout
+// Handles requests before the context's timeout
 func TestCreateAccountSuceedsWhenServerRespondsSlowly(t *testing.T) {
 	// WHEN
 	timeout := time.Duration(2 * time.Second)
@@ -72,7 +77,8 @@ func TestCreateAccountSuceedsWhenServerRespondsSlowly(t *testing.T) {
 	ctx := context.Background()
 
 	// THEN
-	client := NewAccountClient(serverTakesTooLongToRepond.URL, timeout)
+	httpClient := &http.Client{Timeout: timeout}
+	client := NewAccountClient(serverTakesTooLongToRepond.URL, httpClient)
 	acc, err := client.CreateAccount(ctx, &AccountData{}) // acount data does not matter in this case
 	assert.Nil(t, err)
 	assert.Equal(t, "dummy id", acc.ID)
@@ -87,7 +93,8 @@ func TestClientWithoutTimeoutWaitsIndefinitely(t *testing.T) {
 		w.Write([]byte(`{"data": {"id": "dummy id"}}`))
 	}))
 	defer serverTakesTooLongToRepond.Close()
-	client := NewAccountClient(serverTakesTooLongToRepond.URL, time.Duration(0))
+	httpClient := &http.Client{}
+	client := NewAccountClient(serverTakesTooLongToRepond.URL, httpClient)
 	var buf bytes.Buffer
 	client.logger = client.logger.Output(&buf) // redirect logs to a buffer so we can assert them
 	ctx := context.Background()

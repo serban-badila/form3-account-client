@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
@@ -17,7 +18,8 @@ import (
 )
 
 func TestCreateAccount(t *testing.T) {
-	client := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	client := account.NewAccountClient(fetchAPIHostName(), &hc)
 
 	type testCase struct {
 		name             string
@@ -31,7 +33,7 @@ func TestCreateAccount(t *testing.T) {
 		Type:           "accounts", // this seems to be required for the Create operation although the APIdocs say its optional...
 		Attributes: &account.AccountAttributes{
 			Country: "RO",
-			Name:    []string{"Serban", "Badila"},
+			Name:    []string{"John", "Doe"},
 		},
 	}
 	cases := []testCase{
@@ -104,7 +106,8 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestCreateAccountWithExistingIDFails(t *testing.T) {
-	client := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	client := account.NewAccountClient(fetchAPIHostName(), &hc)
 	fixedID := uuid.New().String()
 	ctx := context.Background()
 
@@ -121,7 +124,8 @@ func TestCreateAccountWithExistingIDFails(t *testing.T) {
 }
 
 func TestCanFetch(t *testing.T) {
-	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	ac := account.NewAccountClient(fetchAPIHostName(), &hc)
 	ctx := context.Background()
 
 	t.Run("can fetch account data", func(t *testing.T) {
@@ -160,7 +164,8 @@ func TestCanFetch(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	ac := account.NewAccountClient(fetchAPIHostName(), &hc)
 	ctx := context.Background()
 
 	t.Run("can delete successfully", func(t *testing.T) {
@@ -185,7 +190,8 @@ func TestDelete(t *testing.T) {
 }
 
 func TestPatch(t *testing.T) {
-	ac := account.NewAccountClient(fetchAPIHostName(), account.ClientTimeout)
+	hc := http.Client{Timeout: account.ClientTimeout}
+	ac := account.NewAccountClient(fetchAPIHostName(), &hc)
 	ctx := context.Background()
 
 	t.Run("cannot patch data; likely not implemented on the server side", func(t *testing.T) {

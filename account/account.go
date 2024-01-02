@@ -28,25 +28,21 @@ type AccountClient struct {
 	logger      zerolog.Logger
 }
 
-// NewAccountClient create a client for a given host and with a specified timeout. The timeout includes any
-// retries. Passing a time.Duration(0) will disable the timeout.
-func NewAccountClient(url string, timeout time.Duration) *AccountClient {
+// NewAccountClient create a client for a given host and with a specified http client. The timeout includes any
+// retries.
+func NewAccountClient(url string, client *http.Client) *AccountClient {
 	newLogger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	ac := &AccountClient{
 		url:         url,
 		contentType: "application/vnd.api+json",
-		httpClient:  &http.Client{},
+		httpClient:  client,
 		logger:      newLogger,
 	}
-	ac.timeout = timeout
 
 	return ac
 }
 
 func (ac *AccountClient) GetById(ctx context.Context, accountId string) (*AccountData, error) {
-	ctx, cancel := ac.wrapContext(ctx)
-	defer cancel()
-
 	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, accountId), nil)
 	if err != nil {
 		return nil, fmt.Errorf("got an error while creating the request: %w", err)
@@ -62,9 +58,6 @@ func (ac *AccountClient) GetById(ctx context.Context, accountId string) (*Accoun
 
 // CreateAccount upon succcessful account creation, returns the updated account object and a nil error
 func (ac *AccountClient) CreateAccount(ctx context.Context, account *AccountData) (*AccountData, error) {
-	ctx, cancel := ac.wrapContext(ctx)
-	defer cancel()
-
 	encoded, err := json.Marshal(createRequestBody{Data: account})
 	if err != nil {
 		return &AccountData{}, fmt.Errorf("could not json encode account data: %w", err)
@@ -85,8 +78,6 @@ func (ac *AccountClient) CreateAccount(ctx context.Context, account *AccountData
 
 func (ac *AccountClient) DeleteAccount(ctx context.Context, accountId string, version int64) error {
 
-	ctx, cancel := ac.wrapContext(ctx)
-	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, "DELETE", fmt.Sprintf("%s/v1/organisation/accounts/%s", ac.url, accountId), nil)
 	if err != nil {
 		return fmt.Errorf("got an error while creating the request: %w", err)
@@ -106,8 +97,6 @@ func (ac *AccountClient) UpdateAccount(ctx context.Context, account *AccountData
 		return &AccountData{}, fmt.Errorf("could not json encode account data: %w", err)
 	}
 
-	ctx, cancel := ac.wrapContext(ctx)
-	defer cancel()
 	buffer := bytes.NewBuffer(encoded)
 	request, err := http.NewRequestWithContext(ctx, "PATCH", fmt.Sprintf("%s/v1/organisation/account/%s", ac.url, account.ID), buffer)
 	if err != nil {
@@ -121,14 +110,6 @@ func (ac *AccountClient) UpdateAccount(ctx context.Context, account *AccountData
 	return result.accountData, err
 }
 
-func (ac *AccountClient) wrapContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	if ac.timeout != time.Duration(0) {
-		return context.WithTimeout(ctx, ac.timeout)
-	} else {
-		return ctx, func() {}
-	}
-}
-
 func (ac *AccountClient) executeRequest(ctx context.Context, req *http.Request) (*processedResult, error) {
 	req.Header.Set("Content-Type", ac.contentType)
 	respChan := make(chan *processedResult, 1)
@@ -137,7 +118,7 @@ func (ac *AccountClient) executeRequest(ctx context.Context, req *http.Request) 
 
 	select {
 	case <-ctx.Done():
-		return &processedResult{}, fmt.Errorf("exceeded %v client's total timeout while trying to create the account", ac.timeout)
+		return &processedResult{}, ctx.Err()
 	case result := <-respChan:
 		if result.err != nil {
 			return nil, result.err
