@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -14,8 +15,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type RetryOnError struct {
+	s   int   // response's status code
+	err error // response's error
+}
+
+func (e RetryOnError) Error() string {
+	return fmt.Sprintf("Response status code: %v; with error: %s", e.s, e.err)
+}
+
 // handleRequest deals with retries and is controlled by the parent context
 func handleRequest(ctx context.Context, resultChan chan *processedResult, client *http.Client, request *http.Request) {
+	var retryErr RetryOnError
 	retries := 0
 	for {
 		select { // exit early if context is cancelled
@@ -24,7 +35,8 @@ func handleRequest(ctx context.Context, resultChan chan *processedResult, client
 		default:
 		}
 
-		if !handleRequestOnce(ctx, resultChan, client, request) {
+		err := handleRequestOnce(ctx, resultChan, client, request)
+		if !errors.As(err, &retryErr) {
 			break
 		}
 
@@ -37,20 +49,20 @@ func handleRequest(ctx context.Context, resultChan chan *processedResult, client
 	}
 }
 
-// handleRequestOnce and return a boolean whether the request should be retried
-func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, client *http.Client, request *http.Request) bool {
+// handleRequestOnce and return an error whether the request should be retried
+func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, client *http.Client, request *http.Request) error {
 	body, statusCode, err := doAndReadBody(client, request)
 	var errorString string
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok {
 			errorString = urlErr.Error()
 			log.Ctx(ctx).Error().Str("type", "RequestError").Bool("timeout", urlErr.Timeout()).Str("endpoint", urlErr.URL).Msg(errorString)
-			return true
+			return RetryOnError{statusCode, urlErr}
 		} else {
 			errorString = err.Error()
 			log.Ctx(ctx).Error().Str("type", "ReadError").Msg(errorString)
-			resultChan <- &processedResult{nil, fmt.Errorf("got an error while reading the response body: %s", errorString)}
-			return false
+			resultChan <- &processedResult{nil, fmt.Errorf("got an error while reading the response body: %w", err)}
+			return nil
 		}
 	}
 
@@ -60,7 +72,7 @@ func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, cl
 	switch statusCode {
 	case 204: // can receive this on DELETE
 		resultChan <- &processedResult{nil, nil}
-		return false
+		return nil
 	case 200, 201:
 		{
 			err := json.Unmarshal(body, &deserializedOk)
@@ -68,22 +80,22 @@ func handleRequestOnce(ctx context.Context, resultChan chan *processedResult, cl
 				resultChan <- &processedResult{nil, fmt.Errorf("unable to deserialize response body; error: %w", err)}
 			}
 			resultChan <- &processedResult{deserializedOk.Data, nil}
-			return false
+			return nil
 		}
 	case 400, 401, 403, 404, 405, 406, 409:
 		{
 			json.Unmarshal(body, &deserializedNotOk)
 			resultChan <- &processedResult{nil, fmt.Errorf("response status code %d with error message: %s", statusCode, deserializedNotOk.ErrorMessage)}
-			return false
+			return nil
 		}
 	case 429, 500, 502, 503, 504:
 		json.Unmarshal(body, &deserializedNotOk)
 		log.Ctx(ctx).Error().Str("type", "ResponseError").Int("responseStatus", statusCode).Str("endpoint", request.URL.Path).Msg(deserializedNotOk.ErrorMessage)
-		return true
+		return RetryOnError{statusCode, errors.New(deserializedNotOk.ErrorMessage)}
 	default:
 		{ // what if the server starts redirecting ?
 			resultChan <- &processedResult{nil, fmt.Errorf("unexpected response status code: %d", statusCode)}
-			return false
+			return nil
 		}
 	}
 }
